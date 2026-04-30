@@ -138,7 +138,6 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 60
       MemorySize: 256
-      ReservedConcurrentExecutions: 5
       Environment:
         Variables:
           BUCKET_NAME: !Ref InputBucket
