@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Drift Test 06 - SNS Topic with SQS Subscriber and Queue Policy (Medium Complexity)'
+
+Resources:
+  DriftTestTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: drift-test-06-topic
+      DisplayName: Drift Test Topic
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '06'
+
+  DriftTestQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: drift-test-06-queue
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 86400
+      ReceiveMessageWaitTimeSeconds: 10
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '06'
+
+  QueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref DriftTestQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowSNSPublish
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt DriftTestQueue.Arn
+            Condition:
+              ArnEquals:
+                'aws:SourceArn': !Ref DriftTestTopic
+
+  TopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref DriftTestTopic
+      Protocol: sqs
+      Endpoint: !GetAtt DriftTestQueue.Arn
+      RawMessageDelivery: true
+
+Outputs:
+  TopicArn:
+    Value: !Ref DriftTestTopic
+  QueueUrl:
+    Value: !Ref DriftTestQueue
+  QueueArn:
+    Value: !GetAtt DriftTestQueue.Arn

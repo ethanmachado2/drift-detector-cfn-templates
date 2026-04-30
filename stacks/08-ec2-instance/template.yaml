@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Drift Test 08 - EC2 Instance with IAM Instance Profile and Security Group (Medium-High Complexity)'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+
+Resources:
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: drift-test-08-instance-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '08'
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: drift-test-08-instance-profile
+      Roles:
+        - !Ref InstanceRole
+
+  InstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: drift-test-08-sg
+      GroupDescription: Security group for drift test EC2 instance
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS inbound
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '08'
+
+  DriftTestInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: !Ref AmiId
+      SubnetId: !Ref SubnetId
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds:
+        - !Ref InstanceSG
+      Monitoring: false
+      Tags:
+        - Key: Name
+          Value: drift-test-08-instance
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '08'
+
+Outputs:
+  InstanceId:
+    Value: !Ref DriftTestInstance
+  InstancePrivateIp:
+    Value: !GetAtt DriftTestInstance.PrivateIp
+  SecurityGroupId:
+    Value: !Ref InstanceSG

@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Drift Test 05 - Lambda Function with IAM Role and Log Group (Medium Complexity)'
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: drift-test-05-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '05'
+
+  DriftTestFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: drift-test-05-function
+      Description: Drift detection test Lambda function
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          ENV: test
+          LOG_LEVEL: INFO
+      Code:
+        ZipFile: |
+          import json
+
+          def handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('drift-test-05')
+              }
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '05'
+
+  FunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${DriftTestFunction}'
+      RetentionInDays: 7
+
+Outputs:
+  FunctionArn:
+    Value: !GetAtt DriftTestFunction.Arn
+  FunctionName:
+    Value: !Ref DriftTestFunction
