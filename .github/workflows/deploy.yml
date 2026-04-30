@@ -1,0 +1,147 @@
+name: CloudFormation CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'stacks/*/template.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'stacks/*/template.yaml'
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  validate:
+    name: Validate Templates
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate changed templates
+        run: |
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- 'stacks/*/template.yaml')
+          if [ -z "$CHANGED" ]; then
+            echo "No template changes detected."
+            exit 0
+          fi
+          echo "Changed templates:"
+          echo "$CHANGED"
+          FAILED=0
+          while IFS= read -r file; do
+            echo ":: Validating $file"
+            if aws cloudformation validate-template \
+              --region "$AWS_REGION" \
+              --template-body "file://$file" > /dev/null; then
+              echo "   PASS: $file"
+            else
+              echo "   FAIL: $file"
+              FAILED=1
+            fi
+          done <<< "$CHANGED"
+          exit $FAILED
+
+  deploy:
+    name: Deploy Changed Stacks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy changed stacks
+        run: |
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} -- 'stacks/*/template.yaml' | sort)
+
+          if [ -z "$CHANGED" ]; then
+            echo "No template changes to deploy."
+            exit 0
+          fi
+
+          echo "Stacks to deploy:"
+          echo "$CHANGED"
+
+          fetch_vpc_outputs() {
+            VPC_ID=$(aws cloudformation describe-stacks \
+              --region "$AWS_REGION" \
+              --stack-name drift-test-07 \
+              --query "Stacks[0].Outputs[?OutputKey=='VpcId'].OutputValue" \
+              --output text 2>/dev/null || echo "")
+            SUBNET_ID=$(aws cloudformation describe-stacks \
+              --region "$AWS_REGION" \
+              --stack-name drift-test-07 \
+              --query "Stacks[0].Outputs[?OutputKey=='PublicSubnetAId'].OutputValue" \
+              --output text 2>/dev/null || echo "")
+          }
+
+          fetch_vpc_outputs
+
+          FAILED=0
+          while IFS= read -r file; do
+            STACK_NUM=$(basename "$(dirname "$file")" | grep -o '^[0-9][0-9]')
+            STACK_NAME="drift-test-$STACK_NUM"
+
+            echo ":: Deploying $STACK_NAME from $file"
+
+            EXTRA_PARAMS=""
+            case "$STACK_NUM" in
+              04)
+                if [ -z "$VPC_ID" ]; then
+                  echo "   SKIP: $STACK_NAME requires VpcId but drift-test-07 has no outputs"
+                  FAILED=1
+                  continue
+                fi
+                EXTRA_PARAMS="--parameter-overrides VpcId=$VPC_ID"
+                ;;
+              08)
+                if [ -z "$VPC_ID" ] || [ -z "$SUBNET_ID" ]; then
+                  echo "   SKIP: $STACK_NAME requires VpcId/SubnetId but drift-test-07 has no outputs"
+                  FAILED=1
+                  continue
+                fi
+                EXTRA_PARAMS="--parameter-overrides VpcId=$VPC_ID SubnetId=$SUBNET_ID"
+                ;;
+            esac
+
+            if aws cloudformation deploy \
+              --region "$AWS_REGION" \
+              --template-file "$file" \
+              --stack-name "$STACK_NAME" \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --no-fail-on-empty-changeset \
+              $EXTRA_PARAMS; then
+              echo "   OK: $STACK_NAME deployed"
+              if [ "$STACK_NUM" = "07" ]; then
+                fetch_vpc_outputs
+              fi
+            else
+              echo "   FAIL: $STACK_NAME"
+              FAILED=1
+            fi
+          done <<< "$CHANGED"
+
+          exit $FAILED
