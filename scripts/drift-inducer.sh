@@ -18,11 +18,9 @@ REGION="us-east-1"
 ROUND="${1:-1}"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 LOG_FILE="drift-run-${TIMESTAMP}-round${ROUND}.log"
-COUNTER_DIR=$(mktemp -d)
-trap 'rm -rf "$COUNTER_DIR"' EXIT
 
 log()  { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*" | tee -a "$LOG_FILE"; }
-ok()   { log "  OK   $*"; touch "$COUNTER_DIR/c_${BASHPID}_${RANDOM}"; }
+ok()   { log "  OK   $*"; }
 skip() { log "  SKIP $*"; }
 err()  { log "  ERR  $*"; }
 
@@ -42,16 +40,16 @@ drift_01() {
   bucket=$(cfn_resource drift-test-01 DriftTestBucket)
   log "[01] S3 Basic — tag drift on $bucket"
 
-  local extra_tag="Round${ROUND}"
   aws s3api put-bucket-tagging --region "$REGION" --bucket "$bucket" \
     --tagging "TagSet=[
       {Key=Environment,Value=test},
       {Key=ManagedBy,Value=CloudFormation},
       {Key=DriftTest,Value=01},
       {Key=DriftInduced,Value=true},
-      {Key=Round,Value=${extra_tag}}
-    ]"
-  ok "[01] Added DriftInduced+Round tags to $bucket"
+      {Key=Round,Value=Round${ROUND}}
+    ]" \
+    && ok "[01] Added DriftInduced+Round tags to $bucket" \
+    || err "[01] Failed to tag $bucket"
 }
 
 # ── Stack 02: S3 Advanced ─────────────────────────────────────────────────────
@@ -62,8 +60,9 @@ drift_02() {
   log "[02] S3 Advanced — versioning + lifecycle drift on $bucket"
 
   aws s3api put-bucket-versioning --region "$REGION" --bucket "$bucket" \
-    --versioning-configuration Status=Suspended
-  ok "[02] Versioning Enabled → Suspended on $bucket"
+    --versioning-configuration Status=Suspended \
+    && ok "[02] Versioning Enabled → Suspended on $bucket" \
+    || err "[02] Failed to suspend versioning on $bucket"
 
   local days=7
   [[ "$ROUND" -eq 2 ]] && days=3
@@ -77,8 +76,9 @@ drift_02() {
         \"Filter\": {\"Prefix\": \"\"},
         \"NoncurrentVersionExpiration\": {\"NoncurrentDays\": ${days}}
       }]
-    }"
-  ok "[02] Lifecycle NoncurrentVersionExpiration 30 → ${days} days on $bucket"
+    }" \
+    && ok "[02] Lifecycle NoncurrentVersionExpiration 30 → ${days} days on $bucket" \
+    || err "[02] Failed to update lifecycle on $bucket"
 }
 
 # ── Stack 03: IAM Role ────────────────────────────────────────────────────────
@@ -91,8 +91,9 @@ drift_03() {
   local duration=7200
   [[ "$ROUND" -eq 2 ]] && duration=10800
   [[ "$ROUND" -eq 3 ]] && duration=43200
-  aws iam update-role --role-name "$role" --max-session-duration "$duration"
-  ok "[03] MaxSessionDuration 3600 → ${duration}s on $role"
+  aws iam update-role --role-name "$role" --max-session-duration "$duration" \
+    && ok "[03] MaxSessionDuration 3600 → ${duration}s on $role" \
+    || err "[03] Failed to update MaxSessionDuration on $role"
 
   aws iam put-role-policy \
     --role-name "$role" \
@@ -105,8 +106,9 @@ drift_03() {
         \"Resource\": \"*\",
         \"Condition\": {\"StringEquals\": {\"aws:RequestedRegion\": \"${REGION}\"}}
       }]
-    }"
-  ok "[03] DriftInducedPolicy inline policy added to $role"
+    }" \
+    && ok "[03] DriftInducedPolicy inline policy added to $role" \
+    || err "[03] Failed to put inline policy on $role"
 }
 
 # ── Stack 04: Security Groups ─────────────────────────────────────────────────
@@ -145,15 +147,17 @@ drift_05() {
     --timeout "$timeout" \
     --memory-size "$memory" \
     --environment "Variables={ENV=test,LOG_LEVEL=DEBUG,DRIFT_INDUCED=true,ROUND=${ROUND}}" \
-    > /dev/null
-  ok "[05] Lambda timeout 30 → ${timeout}s, memory 128 → ${memory}MB on $fn"
+    > /dev/null \
+    && ok "[05] Lambda timeout 30 → ${timeout}s, memory 128 → ${memory}MB on $fn" \
+    || err "[05] Failed to update function configuration on $fn"
 
   local retention=30
   [[ "$ROUND" -eq 2 ]] && retention=60
   [[ "$ROUND" -eq 3 ]] && retention=90
   aws logs put-retention-policy --region "$REGION" \
-    --log-group-name "$log_group" --retention-in-days "$retention"
-  ok "[05] Log retention 7 → ${retention} days on $log_group"
+    --log-group-name "$log_group" --retention-in-days "$retention" \
+    && ok "[05] Log retention 7 → ${retention} days on $log_group" \
+    || err "[05] Failed to update log retention on $log_group"
 }
 
 # ── Stack 06: SNS/SQS ─────────────────────────────────────────────────────────
@@ -168,14 +172,16 @@ drift_06() {
   [[ "$ROUND" -eq 2 ]] && vis=300  && retention=604800   # 5min, 7 days
   [[ "$ROUND" -eq 3 ]] && vis=600  && retention=1209600  # 10min, 14 days
   aws sqs set-queue-attributes --region "$REGION" --queue-url "$queue" \
-    --attributes "{\"VisibilityTimeout\":\"${vis}\",\"MessageRetentionPeriod\":\"${retention}\"}"
-  ok "[06] SQS VisibilityTimeout 60 → ${vis}s, retention → ${retention}s"
+    --attributes "{\"VisibilityTimeout\":\"${vis}\",\"MessageRetentionPeriod\":\"${retention}\"}" \
+    && ok "[06] SQS VisibilityTimeout 60 → ${vis}s, retention → ${retention}s" \
+    || err "[06] Failed to update queue attributes on $queue"
 
   aws sns set-subscription-attributes --region "$REGION" \
     --subscription-arn "$sub" \
     --attribute-name RawMessageDelivery \
-    --attribute-value false
-  ok "[06] RawMessageDelivery true → false on subscription"
+    --attribute-value false \
+    && ok "[06] RawMessageDelivery true → false on subscription" \
+    || err "[06] Failed to update subscription attributes on $sub"
 }
 
 # ── Stack 07: VPC ─────────────────────────────────────────────────────────────
@@ -188,13 +194,15 @@ drift_07() {
 
   aws ec2 modify-subnet-attribute --region "$REGION" \
     --subnet-id "$subnet_a" \
-    --no-map-public-ip-on-launch
-  ok "[07] MapPublicIpOnLaunch disabled on $subnet_a"
+    --no-map-public-ip-on-launch \
+    && ok "[07] MapPublicIpOnLaunch disabled on $subnet_a" \
+    || err "[07] Failed to modify subnet attribute on $subnet_a"
 
   aws ec2 create-tags --region "$REGION" \
     --resources "$vpc" \
-    --tags "Key=DriftInduced,Value=true" "Key=Round,Value=${ROUND}"
-  ok "[07] DriftInduced+Round tags added to VPC $vpc"
+    --tags "Key=DriftInduced,Value=true" "Key=Round,Value=${ROUND}" \
+    && ok "[07] DriftInduced+Round tags added to VPC $vpc" \
+    || err "[07] Failed to tag VPC $vpc"
 }
 
 # ── Stack 08: EC2 Instance ────────────────────────────────────────────────────
@@ -206,8 +214,9 @@ drift_08() {
   log "[08] EC2 — monitoring + security group drift on $instance"
 
   aws ec2 monitor-instances --region "$REGION" \
-    --instance-ids "$instance" > /dev/null
-  ok "[08] Detailed monitoring false → true on $instance"
+    --instance-ids "$instance" > /dev/null \
+    && ok "[08] Detailed monitoring false → true on $instance" \
+    || err "[08] Failed to enable monitoring on $instance"
 
   local cidr="10.0.0.0/8"
   [[ "$ROUND" -eq 2 ]] && cidr="172.16.0.0/12"
@@ -241,8 +250,9 @@ drift_09() {
     --evaluation-periods 1 \
     --threshold "$thresh_low" \
     --comparison-operator GreaterThanOrEqualToThreshold \
-    --treat-missing-data notBreaching
-  ok "[09] ErrorRateAlarm threshold 5 → $thresh_low"
+    --treat-missing-data notBreaching \
+    && ok "[09] ErrorRateAlarm threshold 5 → $thresh_low" \
+    || err "[09] Failed to update ErrorRateAlarm"
 
   aws cloudwatch put-metric-alarm --region "$REGION" \
     --alarm-name drift-test-09-high-error-rate \
@@ -254,15 +264,17 @@ drift_09() {
     --datapoints-to-alarm 2 \
     --threshold "$thresh_high" \
     --comparison-operator GreaterThanOrEqualToThreshold \
-    --treat-missing-data notBreaching
-  ok "[09] HighErrorRateAlarm threshold 20 → $thresh_high"
+    --treat-missing-data notBreaching \
+    && ok "[09] HighErrorRateAlarm threshold 20 → $thresh_high" \
+    || err "[09] Failed to update HighErrorRateAlarm"
 
   local retention=30
   [[ "$ROUND" -eq 2 ]] && retention=60
   [[ "$ROUND" -eq 3 ]] && retention=90
   aws logs put-retention-policy --region "$REGION" \
-    --log-group-name "$log_group" --retention-in-days "$retention"
-  ok "[09] Log retention 14 → ${retention} days on $log_group"
+    --log-group-name "$log_group" --retention-in-days "$retention" \
+    && ok "[09] Log retention 14 → ${retention} days on $log_group" \
+    || err "[09] Failed to update log retention on $log_group"
 }
 
 # ── Stack 10: Event Pipeline ──────────────────────────────────────────────────
@@ -284,19 +296,22 @@ drift_10() {
     --function-name "$fn" \
     --timeout "$timeout" \
     --memory-size "$memory" \
-    > /dev/null
-  ok "[10] Lambda timeout 60 → ${timeout}s, memory 256 → ${memory}MB on $fn"
+    > /dev/null \
+    && ok "[10] Lambda timeout 60 → ${timeout}s, memory 256 → ${memory}MB on $fn" \
+    || err "[10] Failed to update function configuration on $fn"
 
   local vis=600
   [[ "$ROUND" -eq 2 ]] && vis=900
   [[ "$ROUND" -eq 3 ]] && vis=1200
   aws sqs set-queue-attributes --region "$REGION" --queue-url "$queue" \
-    --attributes "{\"VisibilityTimeout\":\"${vis}\"}"
-  ok "[10] ProcessingQueue VisibilityTimeout 300 → ${vis}s"
+    --attributes "{\"VisibilityTimeout\":\"${vis}\"}" \
+    && ok "[10] ProcessingQueue VisibilityTimeout 300 → ${vis}s" \
+    || err "[10] Failed to update ProcessingQueue attributes"
 
   aws sqs set-queue-attributes --region "$REGION" --queue-url "$dlq" \
-    --attributes '{"MessageRetentionPeriod":"345600"}'
-  ok "[10] DeadLetterQueue retention 14 days → 4 days"
+    --attributes '{"MessageRetentionPeriod":"345600"}' \
+    && ok "[10] DeadLetterQueue retention 14 days → 4 days" \
+    || err "[10] Failed to update DeadLetterQueue attributes"
 
   local dlq_threshold=5
   [[ "$ROUND" -eq 2 ]] && dlq_threshold=10
@@ -311,15 +326,17 @@ drift_10() {
     --evaluation-periods 1 \
     --threshold "$dlq_threshold" \
     --comparison-operator GreaterThanOrEqualToThreshold \
-    --treat-missing-data notBreaching
-  ok "[10] DLQDepthAlarm threshold 1 → $dlq_threshold"
+    --treat-missing-data notBreaching \
+    && ok "[10] DLQDepthAlarm threshold 1 → $dlq_threshold" \
+    || err "[10] Failed to update DLQDepthAlarm"
 
   local retention=30
   [[ "$ROUND" -eq 2 ]] && retention=60
   [[ "$ROUND" -eq 3 ]] && retention=90
   aws logs put-retention-policy --region "$REGION" \
-    --log-group-name "$log_group" --retention-in-days "$retention"
-  ok "[10] ProcessorLogGroup retention 14 → ${retention} days"
+    --log-group-name "$log_group" --retention-in-days "$retention" \
+    && ok "[10] ProcessorLogGroup retention 14 → ${retention} days" \
+    || err "[10] Failed to update log retention on $log_group"
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -347,11 +364,13 @@ main() {
   wait
 
   local elapsed=$(( $(date +%s) - start ))
-  local count
-  count=$(ls "$COUNTER_DIR" | wc -l | tr -d ' ')
+  local ok_count err_count
+  ok_count=$(grep -c '  OK   ' "$LOG_FILE" || true)
+  err_count=$(grep -c '  ERR  ' "$LOG_FILE" || true)
 
   log "================================================"
-  log "  Completed in ${elapsed}s — ${count} changes applied across 10 stacks"
+  log "  Completed in ${elapsed}s"
+  log "  OK: ${ok_count}  ERR: ${err_count}  (see log for details)"
   log "  Full log: $LOG_FILE"
   log "================================================"
 }
