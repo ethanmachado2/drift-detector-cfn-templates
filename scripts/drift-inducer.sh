@@ -23,6 +23,16 @@ log()  { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*" | tee -a "$LOG_FILE"; }
 ok()   { log "  OK   $*"; }
 skip() { log "  SKIP $*"; }
 err()  { log "  ERR  $*"; }
+# Runs a command, logs OK on success, or logs ERR with the actual AWS error on failure.
+run()  {
+  local label="$1"; shift
+  local stderr_out
+  if stderr_out=$("$@" 2>&1 >/dev/null); then
+    ok "$label"
+  else
+    err "$label — $stderr_out"
+  fi
+}
 
 cfn_resource() {
   aws cloudformation describe-stack-resource \
@@ -40,16 +50,22 @@ drift_01() {
   bucket=$(cfn_resource drift-test-01 DriftTestBucket)
   log "[01] S3 Basic — tag drift on $bucket"
 
-  aws s3api put-bucket-tagging --region "$REGION" --bucket "$bucket" \
-    --tagging "TagSet=[
-      {Key=Environment,Value=test},
-      {Key=ManagedBy,Value=CloudFormation},
-      {Key=DriftTest,Value=01},
-      {Key=DriftInduced,Value=true},
-      {Key=Round,Value=Round${ROUND}}
-    ]" \
-    && ok "[01] Added DriftInduced+Round tags to $bucket" \
-    || err "[01] Failed to tag $bucket"
+  # put-bucket-tagging replaces all tags, including AWS system tags (aws:cloudformation:*)
+  # that cannot be omitted. Fetch existing tags, merge in drift tags, then PUT.
+  local existing merged
+  existing=$(aws s3api get-bucket-tagging --region "$REGION" --bucket "$bucket" \
+    --output json 2>/dev/null || echo '{"TagSet":[]}')
+  merged=$(echo "$existing" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+tags = [t for t in data.get('TagSet', []) if t['Key'] not in ('DriftInduced', 'Round')]
+tags.append({'Key': 'DriftInduced', 'Value': 'true'})
+tags.append({'Key': 'Round', 'Value': 'Round${ROUND}'})
+print(json.dumps({'TagSet': tags}))
+")
+  run "[01] Added DriftInduced+Round tags to $bucket" \
+    aws s3api put-bucket-tagging --region "$REGION" --bucket "$bucket" \
+    --tagging "$merged"
 }
 
 # ── Stack 02: S3 Advanced ─────────────────────────────────────────────────────
