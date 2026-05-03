@@ -1,205 +1,44 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Drift Test 10 - Event-Driven Processing Pipeline: S3, SQS, SNS, Lambda, IAM, CloudWatch (High Complexity)'
-
-Parameters:
-  Environment:
-    Type: String
-    Default: test
-    AllowedValues:
-      - test
-      - staging
+Description: 'Drift Test 03 - IAM Role with Inline and Managed Policies (Low-Medium Complexity)'
 
 Resources:
-  InputBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName:!Sub 'drift-test-10-input-${AWS::AccountId}'
-      VersioningConfiguration:
-        Status: Enabled
-      LifecycleConfiguration:
-        Rules:
-          - Id: CleanupOldVersions
-            Status: Enabled
-            NoncurrentVersionExpiration:
-              NoncurrentDays: 14
-      Tags:
-        - Key: Environment
-          Value:!Ref Environment
-        - Key: DriftTest
-          Value: '10'
-
-  DeadLetterQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: drift-test-10-dlq
-      MessageRetentionPeriod: 1209600
-      Tags:
-        - Key: Environment
-          Value:!Ref Environment
-        - Key: DriftTest
-          Value: '10'
-
-  ProcessingQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: drift-test-10-processing
-      VisibilityTimeout: 300
-      MessageRetentionPeriod: 86400
-      ReceiveMessageWaitTimeSeconds: 20
-      RedrivePolicy:
-        deadLetterTargetArn:!GetAtt DeadLetterQueue.Arn
-        maxReceiveCount: 3
-      Tags:
-        - Key: Environment
-          Value:!Ref Environment
-        - Key: DriftTest
-          Value: '10'
-
-  ProcessingQueuePolicy:
-    Type: AWS::SQS::QueuePolicy
-    Properties:
-      Queues:
-        -!Ref ProcessingQueue
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: AllowSNSPublish
-            Effect: Allow
-            Principal:
-              Service: sns.amazonaws.com
-            Action: sqs:SendMessage
-            Resource:!GetAtt ProcessingQueue.Arn
-
-  NotificationTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: drift-test-10-notifications
-      Tags:
-        - Key: Environment
-          Value:!Ref Environment
-        - Key: DriftTest
-          Value: '10'
-
-  TopicToQueueSubscription:
-    Type: AWS::SNS::Subscription
-    Properties:
-      TopicArn:!Ref NotificationTopic
-      Protocol: sqs
-      Endpoint:!GetAtt ProcessingQueue.Arn
-      RawMessageDelivery: false
-
-  LambdaExecutionRole:
+  DriftTestRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: drift-test-10-lambda-role
+      RoleName: drift-test-03-role
+      Description: IAM role for drift detection testing
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              Service: lambda.amazonaws.com
+              Service: ec2.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
       Policies:
-        - PolicyName: PipelineAccess
+        - PolicyName: CloudWatchLogsPolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                Resource:!Sub '${InputBucket.Arn}/*'
-              - Effect: Allow
-                Action:
-                  - sqs:ReceiveMessage
-                  - sqs:DeleteMessage
-                  - sqs:GetQueueAttributes
-                  - sqs:ChangeMessageVisibility
-                Resource:!GetAtt ProcessingQueue.Arn
-              - Effect: Allow
-                Action: sns:Publish
-                Resource:!Ref NotificationTopic
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+      MaxSessionDuration: 3600
       Tags:
         - Key: Environment
-          Value:!Ref Environment
+          Value: test
+        - Key: ManagedBy
+          Value: CloudFormation
         - Key: DriftTest
-          Value: '10'
-
-  ProcessorFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: drift-test-10-processor
-      Description: Processes events from the SQS queue
-      Runtime: python3.12
-      Handler: index.handler
-      Role:!GetAtt LambdaExecutionRole.Arn
-      Timeout: 300
-      MemorySize: 2048
-      Environment:
-        Variables:
-          BUCKET_NAME:!Ref InputBucket
-          TOPIC_ARN:!Ref NotificationTopic
-          ENV:!Ref Environment
-          LOG_LEVEL: INFO
-      Code:
-        ZipFile: |
-          import json, os
-
-          def handler(event, context):
-              for record in event.get('Records', []):
-                  print(json.dumps({'body': record['body'], 'env': os.environ.get('ENV')}))
-              return {'statusCode': 200}
-      Tags:
-        - Key: Environment
-          Value:!Ref Environment
-        - Key: DriftTest
-          Value: '10'
-
-  SQSEventSourceMapping:
-    Type: AWS::Lambda::EventSourceMapping
-    Properties:
-      EventSourceArn:!GetAtt ProcessingQueue.Arn
-      FunctionName:!GetAtt ProcessorFunction.Arn
-      BatchSize: 10
-      MaximumBatchingWindowInSeconds: 5
-      Enabled: true
-
-  ProcessorLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName:!Sub '/aws/lambda/${ProcessorFunction}'
-      RetentionInDays: 14
-
-  DLQDepthAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: drift-test-10-dlq-depth
-      AlarmDescription: Fires when messages appear in the DLQ indicating processing failures
-      Namespace: AWS/SQS
-      MetricName: ApproximateNumberOfMessagesVisible
-      Dimensions:
-        - Name: QueueName
-          Value:!GetAtt DeadLetterQueue.QueueName
-      Statistic: Maximum
-      Period: 60
-      EvaluationPeriods: 1
-      Threshold: 1
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      AlarmActions:
-        -!Ref NotificationTopic
-      TreatMissingData: notBreaching
+          Value: '03'
 
 Outputs:
-  InputBucketName:
-    Value:!Ref InputBucket
-  ProcessingQueueUrl:
-    Value:!Ref ProcessingQueue
-  DeadLetterQueueUrl:
-    Value:!Ref DeadLetterQueue
-  NotificationTopicArn:
-    Value:!Ref NotificationTopic
-  ProcessorFunctionArn:
-    Value:!GetAtt ProcessorFunction.Arn
+  RoleArn:
+    Value:!GetAtt DriftTestRole.Arn
+  RoleName:
+    Value: !Ref DriftTestRole
