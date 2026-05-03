@@ -66,7 +66,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 5432
           ToPort: 5432
-          SourceSecurityGroupId: !Ref AppServerSG
+          SourceSecurityGroupId:!Ref AppServerSG
           Description: PostgreSQL from app tier
       SecurityGroupEgress:
         - IpProtocol: '-1'
@@ -80,7 +80,7 @@ Resources:
 
 Outputs:
   WebServerSGId:
-    Value:!Ref WebServerSG
+    Value: !Ref WebServerSG
   AppServerSGId:
     Value: !Ref AppServerSG
   DataSGId:
