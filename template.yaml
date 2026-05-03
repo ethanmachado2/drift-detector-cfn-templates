@@ -1,22 +1,20 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Drift Test 02 - S3 Bucket with Versioning, Lifecycle, and Bucket Policy (Low-Medium Complexity)",
-  
+
   "Resources": {
     "DriftTestBucket": {
       "Type": "AWS::S3::Bucket",
       "Properties": {
-        "BucketName": {
-          "Fn::Sub": "drift-test-02-${AWS::AccountId}"
-        },
+        "BucketName": "drift-test-02-554598304668",
         "VersioningConfiguration": {
           "Status": "Suspended"
         },
         "LifecycleConfiguration": {
           "Rules": [
             {
-              "Id": "drift-test-lifecycle",
               "Status": "Enabled",
+              "ID": "drift-test-lifecycle",
               "NoncurrentVersionExpiration": {
                 "NoncurrentDays": 7
               }
@@ -56,12 +54,13 @@
               "Resource": [
                 {
                   "Fn::GetAtt": [
-                    "DriftTestBucket", "Arn"
+                    "DriftTestBucket",
+                    "Arn"
                   ]
                 },
                 {
                   "Fn::Sub": [
-                    "${DriftTestBucket.Arn}/*"
+                    "${"DriftTestBucket.Arn"}/\*"
                   ]
                 }
               ],
@@ -85,7 +84,8 @@
     "BucketArn": {
       "Value": {
         "Fn::GetAtt": [
-          "DriftTestBucket", "Arn"
+          "DriftTestBucket",
+          "Arn"
         ]
       }
     }
