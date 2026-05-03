@@ -1,0 +1,8 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "GitSyncSetupWaitCondition": {
+      "Type": "AWS::CloudFormation::WaitConditionHandle"
+    }
+  }
+}
