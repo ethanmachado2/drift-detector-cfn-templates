@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Drift Test 03 - IAM Role with Inline and Managed Policies (Low-Medium Complexity)'
+
+Resources:
+  DriftTestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: drift-test-03-role
+      Description: IAM role for drift detection testing
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+      Policies:
+        - PolicyName: CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+      MaxSessionDuration: 3600
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: ManagedBy
+          Value: CloudFormation
+        - Key: DriftTest
+          Value: '03'
+
+Outputs:
+  RoleArn:
+    Value:!GetAtt DriftTestRole.Arn
+  RoleName:
+    Value:!Ref DriftTestRole
