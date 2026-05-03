@@ -33,6 +33,14 @@ Resources:
               ArnEquals:
                 'aws:SourceArn': !Ref DriftTestTopic
 
+  TopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref DriftTestTopic
+      Protocol: sqs
+      Endpoint: !GetAtt DriftTestQueue.Arn
+      RawMessageDelivery: true
+
 Outputs:
   QueueUrl:
     Value: !Ref DriftTestQueue
