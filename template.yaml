@@ -1,0 +1,9 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Drift detector e2e test stack
+Resources:
+  TestBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags:
+        - Key: ManagedBy
+          Value: CloudFormation
