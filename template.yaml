@@ -15,10 +15,6 @@ Resources:
           Value: test
         - Key: DriftTest
           Value: '07'
-        - Key: DriftInduced
-          Value: 'true'
-        - Key: Round
-          Value: '1'
 
   PublicSubnetA:
     Type: AWS::EC2::Subnet
