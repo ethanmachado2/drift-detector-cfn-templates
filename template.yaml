@@ -1,0 +1,92 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Drift Test 02 - S3 Bucket with Versioning, Lifecycle, and Bucket Policy (Low-Medium Complexity)",
+  "Resources": {
+    "DriftTestBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": "drift-test-02-554598304668",
+        "VersioningConfiguration": {
+          "Status": "Suspended"
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Status": "Enabled",
+              "ID": "drift-test-lifecycle",
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 7
+              }
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": "test"
+          },
+          {
+            "Key": "ManagedBy",
+            "Value": "CloudFormation"
+          },
+          {
+            "Key": "DriftTest",
+            "Value": "02"
+          }
+        ]
+      }
+    },
+    "BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "DriftTestBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "DenyInsecureTransport",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "DriftTestBucket",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Sub": [
+                    "${DriftTestBucket.Arn}/*"
+                  ]
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BucketName": {
+      "Value": {
+        "Ref": "DriftTestBucket"
+      }
+    },
+    "BucketArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DriftTestBucket",
+          "Arn"
+        ]
+      }
+    }
+  }
+}
