@@ -63,7 +63,7 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
-      ImageId:!Ref AmiId
+      ImageId: !Ref AmiId
       SubnetId:!Ref SubnetId
       IamInstanceProfile: !Ref InstanceProfile
       SecurityGroupIds:
@@ -83,4 +83,4 @@ Outputs:
   InstancePrivateIp:
     Value: !GetAtt DriftTestInstance.PrivateIp
   SecurityGroupId:
-    Value:!Ref InstanceSG
+    Value: !Ref InstanceSG
