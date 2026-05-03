@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Drift Test 01 - Single S3 Bucket (Low Complexity)'
+
+Resources:
+  DriftTestBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:!Sub 'drift-test-01-${AWS::AccountId}'
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: ManagedBy
+          Value: CloudFormation
+        - Key: DriftTest
+          Value: '01'
+
+Outputs:
+  BucketName:
+    Value:!Ref DriftTestBucket
+  BucketArn:
+    Value:!GetAtt DriftTestBucket.Arn
