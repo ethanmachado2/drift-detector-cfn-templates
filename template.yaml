@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Drift Test 09 - CloudWatch Log Group, Metric Filter, and Alarms with SNS (Medium-High Complexity)'
+
+Parameters:
+  AlarmEmail:
+    Type: String
+    Default: test@example.com
+
+Resources:
+  AppLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /drift-test/09/app-logs
+      RetentionInDays: 14
+
+  ErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref AppLogGroup
+      FilterName: drift-test-09-error-count
+      FilterPattern: '[timestamp, level=ERROR,...]'
+      MetricTransformations:
+        - MetricNamespace: DriftTest
+          MetricName: ErrorCount
+          MetricValue: '1'
+          Unit: Count
+
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: drift-test-09-alarms
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '09'
+
+  AlarmEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AlarmTopic
+      Protocol: email
+      Endpoint:!Ref AlarmEmail
+
+  ErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: drift-test-09-error-rate
+      AlarmDescription: Fires when error count exceeds threshold in a 5-minute window
+      Namespace: DriftTest
+      MetricName: ErrorCount
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmTopic
+      OKActions:
+        -!Ref AlarmTopic
+      TreatMissingData: notBreaching
+
+  HighErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: drift-test-09-high-error-rate
+      AlarmDescription: Fires when error count is critically high
+      Namespace: DriftTest
+      MetricName: ErrorCount
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 20
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        -!Ref AlarmTopic
+      TreatMissingData: notBreaching
+
+Outputs:
+  LogGroupName:
+    Value: !Ref AppLogGroup
+  AlarmTopicArn:
+    Value: !Ref AlarmTopic
