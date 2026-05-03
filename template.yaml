@@ -31,7 +31,7 @@ Resources:
             Resource: !GetAtt DriftTestQueue.Arn
             Condition:
               ArnEquals:
-                'aws:SourceArn': arn:aws:sns:us-east-1:554598304668:drift-test-06-topic
+                'aws:SourceArn': !Ref DriftTestTopic
 
 Outputs:
   QueueUrl:
