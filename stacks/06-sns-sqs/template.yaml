@@ -49,7 +49,7 @@ Resources:
     Properties:
       TopicArn: !Ref DriftTestTopic
       Protocol: sqs
-      Endpoint: !GetAtt DriftTestQueue.Arn
+      Endpoint:!GetAtt DriftTestQueue.Arn
       RawMessageDelivery: true
 
 Outputs:
@@ -58,4 +58,4 @@ Outputs:
   QueueUrl:
     Value: !Ref DriftTestQueue
   QueueArn:
-    Value: !GetAtt DriftTestQueue.Arn
+    Value:!GetAtt DriftTestQueue.Arn
