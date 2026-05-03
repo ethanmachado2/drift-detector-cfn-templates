@@ -1,7 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Drift Test 02 - S3 Bucket with Versioning, Lifecycle, and Bucket Policy (Low-Medium Complexity)",
-
   "Resources": {
     "DriftTestBucket": {
       "Type": "AWS::S3::Bucket",
@@ -60,7 +59,7 @@
                 },
                 {
                   "Fn::Sub": [
-                    "${"DriftTestBucket.Arn"}/\*"
+                    "${DriftTestBucket.Arn}/*"
                   ]
                 }
               ],
