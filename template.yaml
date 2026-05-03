@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Drift Test 04 - Layered Security Groups with Cross-References (Medium Complexity)'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC in which to create the security groups
+
+Resources:
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: drift-test-04-web
+      GroupDescription: Allows inbound HTTP and HTTPS from the internet
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP from internet
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS from internet
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '04'
+
+  AppServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: drift-test-04-app
+      GroupDescription: Allows inbound from web tier only
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref WebServerSG
+          Description: App traffic from web tier
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '04'
+
+  DataSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: drift-test-04-data
+      GroupDescription: Allows inbound from app tier only
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref AppServerSG
+          Description: PostgreSQL from app tier
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound
+      Tags:
+        - Key: Environment
+          Value: test
+        - Key: DriftTest
+          Value: '04'
+
+Outputs:
+  WebServerSGId:
+    Value:!Ref WebServerSG
+  AppServerSGId:
+    Value: !Ref AppServerSG
+  DataSGId:
+    Value: !Ref DataSG
