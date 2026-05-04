@@ -18,7 +18,7 @@ Resources:
     Properties:
       LogGroupName: !Ref AppLogGroup
       FilterName: drift-test-09-error-count
-      FilterPattern: '[timestamp, level=ERROR, ...]'
+      FilterPattern: '[timestamp, level=ERROR,...]'
       MetricTransformations:
         - MetricNamespace: DriftTest
           MetricName: ErrorCount
