@@ -12,10 +12,10 @@
         "LifecycleConfiguration": {
           "Rules": [
             {
-              "Id": "ExpireNoncurrentVersions",
+              "Id": "drift-test-lifecycle",
               "Status": "Enabled",
               "NoncurrentVersionExpiration": {
-                "NoncurrentDays": 30
+                "NoncurrentDays": 1
               }
             }
           ]
@@ -66,21 +66,6 @@
             }
           ]
         }
-      }
-    }
-  },
-  "Outputs": {
-    "BucketName": {
-      "Value": {
-        "Ref": "DriftTestBucket"
-      }
-    },
-    "BucketArn": {
-      "Value": {
-        "Fn::GetAtt": [
-          "DriftTestBucket",
-          "Arn"
-        ]
       }
     }
   }
