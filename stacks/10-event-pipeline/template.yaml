@@ -24,7 +24,7 @@ Resources:
               NoncurrentDays: 14
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
@@ -35,7 +35,7 @@ Resources:
       MessageRetentionPeriod: 1209600
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
@@ -51,7 +51,7 @@ Resources:
         maxReceiveCount: 3
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
@@ -68,7 +68,7 @@ Resources:
             Principal:
               Service: sns.amazonaws.com
             Action: sqs:SendMessage
-            Resource: !GetAtt ProcessingQueue.Arn
+            Resource:!GetAtt ProcessingQueue.Arn
 
   NotificationTopic:
     Type: AWS::SNS::Topic
@@ -76,7 +76,7 @@ Resources:
       TopicName: drift-test-10-notifications
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
@@ -85,7 +85,7 @@ Resources:
     Properties:
       TopicArn: !Ref NotificationTopic
       Protocol: sqs
-      Endpoint: !GetAtt ProcessingQueue.Arn
+      Endpoint:!GetAtt ProcessingQueue.Arn
       RawMessageDelivery: false
 
   LambdaExecutionRole:
@@ -118,13 +118,13 @@ Resources:
                   - sqs:DeleteMessage
                   - sqs:GetQueueAttributes
                   - sqs:ChangeMessageVisibility
-                Resource: !GetAtt ProcessingQueue.Arn
+                Resource:!GetAtt ProcessingQueue.Arn
               - Effect: Allow
                 Action: sns:Publish
                 Resource: !Ref NotificationTopic
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
@@ -135,14 +135,14 @@ Resources:
       Description: Processes events from the SQS queue
       Runtime: python3.12
       Handler: index.handler
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 60
-      MemorySize: 256
+      Role:!GetAtt LambdaExecutionRole.Arn
+      Timeout: 120
+      MemorySize: 512
       Environment:
         Variables:
           BUCKET_NAME: !Ref InputBucket
           TOPIC_ARN: !Ref NotificationTopic
-          ENV: !Ref Environment
+          ENV:!Ref Environment
           LOG_LEVEL: INFO
       Code:
         ZipFile: |
@@ -154,15 +154,15 @@ Resources:
               return {'statusCode': 200}
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
   SQSEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
-      EventSourceArn: !GetAtt ProcessingQueue.Arn
-      FunctionName: !GetAtt ProcessorFunction.Arn
+      EventSourceArn:!GetAtt ProcessingQueue.Arn
+      FunctionName:!GetAtt ProcessorFunction.Arn
       BatchSize: 10
       MaximumBatchingWindowInSeconds: 5
       Enabled: true
@@ -182,7 +182,7 @@ Resources:
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
         - Name: QueueName
-          Value: !GetAtt DeadLetterQueue.QueueName
+          Value:!GetAtt DeadLetterQueue.QueueName
       Statistic: Maximum
       Period: 60
       EvaluationPeriods: 1
@@ -194,11 +194,11 @@ Resources:
 
 Outputs:
   InputBucketName:
-    Value: !Ref InputBucket
+    Value:!Ref InputBucket
   ProcessingQueueUrl:
-    Value: !Ref ProcessingQueue
+    Value:!Ref ProcessingQueue
   DeadLetterQueueUrl:
-    Value: !Ref DeadLetterQueue
+    Value:!Ref DeadLetterQueue
   NotificationTopicArn:
     Value: !Ref NotificationTopic
   ProcessorFunctionArn:
