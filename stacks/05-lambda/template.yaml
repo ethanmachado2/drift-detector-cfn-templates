@@ -28,9 +28,9 @@ Resources:
       Description: Drift detection test Lambda function
       Runtime: python3.12
       Handler: index.handler
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 30
-      MemorySize: 128
+      Role:!GetAtt LambdaExecutionRole.Arn
+      Timeout: 120
+      MemorySize: 1024
       Environment:
         Variables:
           ENV: test
