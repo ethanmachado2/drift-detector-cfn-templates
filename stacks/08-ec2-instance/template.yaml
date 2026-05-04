@@ -64,7 +64,7 @@ Resources:
     Properties:
       InstanceType: t3.micro
       ImageId: !Ref AmiId
-      SubnetId: !Ref SubnetId
+      SubnetId:!Ref SubnetId
       IamInstanceProfile: !Ref InstanceProfile
       SecurityGroupIds:
         - !Ref InstanceSG
