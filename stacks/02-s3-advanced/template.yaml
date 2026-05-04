@@ -12,10 +12,10 @@
         "LifecycleConfiguration": {
           "Rules": [
             {
-              "Id": "ExpireNoncurrentVersions",
+              "Id": "drift-test-lifecycle",
               "Status": "Enabled",
               "NoncurrentVersionExpiration": {
-                "NoncurrentDays": 30
+                "NoncurrentDays": 7
               }
             }
           ]
@@ -68,7 +68,7 @@
         }
       }
     }
-  },
+ },
   "Outputs": {
     "BucketName": {
       "Value": {
