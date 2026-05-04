@@ -16,6 +16,6 @@ Resources:
 
 Outputs:
   BucketName:
-    Value: !Ref DriftTestBucket
+    Value:!Ref DriftTestBucket
   BucketArn:
-    Value: !GetAtt DriftTestBucket.Arn
+    Value:!GetAtt DriftTestBucket.Arn
