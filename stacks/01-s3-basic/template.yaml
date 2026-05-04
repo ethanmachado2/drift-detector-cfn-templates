@@ -13,6 +13,10 @@ Resources:
           Value: CloudFormation
         - Key: DriftTest
           Value: '01'
+        - Key: Round
+          Value: Round1
+        - Key: DriftInduced
+          Value: 'true'
 
 Outputs:
   BucketName:
