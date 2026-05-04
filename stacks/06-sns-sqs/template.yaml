@@ -2,17 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Drift Test 06 - SNS Topic with SQS Subscriber and Queue Policy (Medium Complexity)'
 
 Resources:
-  DriftTestTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: drift-test-06-topic
-      DisplayName: Drift Test Topic
-      Tags:
-        - Key: Environment
-          Value: test
-        - Key: DriftTest
-          Value: '06'
-
   DriftTestQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -44,17 +33,7 @@ Resources:
               ArnEquals:
                 'aws:SourceArn': !Ref DriftTestTopic
 
-  TopicSubscription:
-    Type: AWS::SNS::Subscription
-    Properties:
-      TopicArn: !Ref DriftTestTopic
-      Protocol: sqs
-      Endpoint: !GetAtt DriftTestQueue.Arn
-      RawMessageDelivery: true
-
 Outputs:
-  TopicArn:
-    Value: !Ref DriftTestTopic
   QueueUrl:
     Value: !Ref DriftTestQueue
   QueueArn:
