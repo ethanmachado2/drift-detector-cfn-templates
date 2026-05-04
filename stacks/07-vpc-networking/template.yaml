@@ -19,9 +19,9 @@ Resources:
   PublicSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       CidrBlock: 10.0.1.0/24
-      AvailabilityZone: !Select [0, !GetAZs '']
+      AvailabilityZone:!Select [0,!GetAZs '']
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -32,9 +32,9 @@ Resources:
   PublicSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       CidrBlock: 10.0.2.0/24
-      AvailabilityZone: !Select [1, !GetAZs '']
+      AvailabilityZone:!Select [1,!GetAZs '']
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -45,9 +45,9 @@ Resources:
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       CidrBlock: 10.0.11.0/24
-      AvailabilityZone: !Select [0, !GetAZs '']
+      AvailabilityZone:!Select [0,!GetAZs '']
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
@@ -58,9 +58,9 @@ Resources:
   PrivateSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       CidrBlock: 10.0.12.0/24
-      AvailabilityZone: !Select [1, !GetAZs '']
+      AvailabilityZone:!Select [1,!GetAZs '']
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
@@ -80,13 +80,13 @@ Resources:
   IGWAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref DriftTestVPC
-      InternetGatewayId: !Ref InternetGateway
+      VpcId:!Ref DriftTestVPC
+      InternetGatewayId:!Ref InternetGateway
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       Tags:
         - Key: Name
           Value: drift-test-07-public-rt
@@ -97,26 +97,26 @@ Resources:
     Type: AWS::EC2::Route
     DependsOn: IGWAttachment
     Properties:
-      RouteTableId: !Ref PublicRouteTable
+      RouteTableId:!Ref PublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
+      GatewayId:!Ref InternetGateway
 
   PublicSubnetAAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnetA
-      RouteTableId: !Ref PublicRouteTable
+      SubnetId:!Ref PublicSubnetA
+      RouteTableId:!Ref PublicRouteTable
 
   PublicSubnetBAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnetB
-      RouteTableId: !Ref PublicRouteTable
+      SubnetId:!Ref PublicSubnetB
+      RouteTableId:!Ref PublicRouteTable
 
   PrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       Tags:
         - Key: Name
           Value: drift-test-07-private-rt
@@ -126,23 +126,23 @@ Resources:
   PrivateSubnetAAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PrivateSubnetA
-      RouteTableId: !Ref PrivateRouteTable
+      SubnetId:!Ref PrivateSubnetA
+      RouteTableId:!Ref PrivateRouteTable
 
   PrivateSubnetBAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PrivateSubnetB
-      RouteTableId: !Ref PrivateRouteTable
+      SubnetId:!Ref PrivateSubnetB
+      RouteTableId:!Ref PrivateRouteTable
 
 Outputs:
   VpcId:
-    Value: !Ref DriftTestVPC
+    Value:!Ref DriftTestVPC
   PublicSubnetAId:
-    Value: !Ref PublicSubnetA
+    Value:!Ref PublicSubnetA
   PublicSubnetBId:
-    Value: !Ref PublicSubnetB
+    Value:!Ref PublicSubnetB
   PrivateSubnetAId:
-    Value: !Ref PrivateSubnetA
+    Value:!Ref PrivateSubnetA
   PrivateSubnetBId:
-    Value: !Ref PrivateSubnetB
+    Value:!Ref PrivateSubnetB
