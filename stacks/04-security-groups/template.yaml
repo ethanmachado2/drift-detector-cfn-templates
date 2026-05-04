@@ -61,7 +61,7 @@ Resources:
     Properties:
       GroupName: drift-test-04-data
       GroupDescription: Allows inbound from app tier only
-      VpcId: !Ref VpcId
+      VpcId:!Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 5432
