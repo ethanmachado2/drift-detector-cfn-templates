@@ -13,7 +13,7 @@ Resources:
   InputBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub 'drift-test-10-input-${AWS::AccountId}'
+      BucketName:!Sub 'drift-test-10-input-${AWS::AccountId}'
       VersioningConfiguration:
         Status: Enabled
       LifecycleConfiguration:
@@ -24,7 +24,7 @@ Resources:
               NoncurrentDays: 14
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
@@ -35,7 +35,7 @@ Resources:
       MessageRetentionPeriod: 1209600
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
@@ -47,11 +47,11 @@ Resources:
       MessageRetentionPeriod: 86400
       ReceiveMessageWaitTimeSeconds: 20
       RedrivePolicy:
-        deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
+        deadLetterTargetArn:!GetAtt DeadLetterQueue.Arn
         maxReceiveCount: 3
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
@@ -59,7 +59,7 @@ Resources:
     Type: AWS::SQS::QueuePolicy
     Properties:
       Queues:
-        - !Ref ProcessingQueue
+        -!Ref ProcessingQueue
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -68,7 +68,7 @@ Resources:
             Principal:
               Service: sns.amazonaws.com
             Action: sqs:SendMessage
-            Resource: !GetAtt ProcessingQueue.Arn
+            Resource:!GetAtt ProcessingQueue.Arn
 
   NotificationTopic:
     Type: AWS::SNS::Topic
@@ -76,16 +76,16 @@ Resources:
       TopicName: drift-test-10-notifications
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
   TopicToQueueSubscription:
     Type: AWS::SNS::Subscription
     Properties:
-      TopicArn: !Ref NotificationTopic
+      TopicArn:!Ref NotificationTopic
       Protocol: sqs
-      Endpoint: !GetAtt ProcessingQueue.Arn
+      Endpoint:!GetAtt ProcessingQueue.Arn
       RawMessageDelivery: false
 
   LambdaExecutionRole:
@@ -111,20 +111,20 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                   - s3:DeleteObject
-                Resource: !Sub '${InputBucket.Arn}/*'
+                Resource:!Sub '${InputBucket.Arn}/*'
               - Effect: Allow
                 Action:
                   - sqs:ReceiveMessage
                   - sqs:DeleteMessage
                   - sqs:GetQueueAttributes
                   - sqs:ChangeMessageVisibility
-                Resource: !GetAtt ProcessingQueue.Arn
+                Resource:!GetAtt ProcessingQueue.Arn
               - Effect: Allow
                 Action: sns:Publish
-                Resource: !Ref NotificationTopic
+                Resource:!Ref NotificationTopic
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
@@ -135,14 +135,14 @@ Resources:
       Description: Processes events from the SQS queue
       Runtime: python3.12
       Handler: index.handler
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 60
-      MemorySize: 256
+      Role:!GetAtt LambdaExecutionRole.Arn
+      Timeout: 180
+      MemorySize: 1024
       Environment:
         Variables:
-          BUCKET_NAME: !Ref InputBucket
-          TOPIC_ARN: !Ref NotificationTopic
-          ENV: !Ref Environment
+          BUCKET_NAME:!Ref InputBucket
+          TOPIC_ARN:!Ref NotificationTopic
+          ENV:!Ref Environment
           LOG_LEVEL: INFO
       Code:
         ZipFile: |
@@ -154,15 +154,15 @@ Resources:
               return {'statusCode': 200}
       Tags:
         - Key: Environment
-          Value: !Ref Environment
+          Value:!Ref Environment
         - Key: DriftTest
           Value: '10'
 
   SQSEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
-      EventSourceArn: !GetAtt ProcessingQueue.Arn
-      FunctionName: !GetAtt ProcessorFunction.Arn
+      EventSourceArn:!GetAtt ProcessingQueue.Arn
+      FunctionName:!GetAtt ProcessorFunction.Arn
       BatchSize: 10
       MaximumBatchingWindowInSeconds: 5
       Enabled: true
@@ -170,7 +170,7 @@ Resources:
   ProcessorLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${ProcessorFunction}'
+      LogGroupName:!Sub '/aws/lambda/${ProcessorFunction}'
       RetentionInDays: 14
 
   DLQDepthAlarm:
@@ -182,24 +182,24 @@ Resources:
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
         - Name: QueueName
-          Value: !GetAtt DeadLetterQueue.QueueName
+          Value:!GetAtt DeadLetterQueue.QueueName
       Statistic: Maximum
       Period: 60
       EvaluationPeriods: 1
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
-        - !Ref NotificationTopic
+        -!Ref NotificationTopic
       TreatMissingData: notBreaching
 
 Outputs:
   InputBucketName:
-    Value: !Ref InputBucket
+    Value:!Ref InputBucket
   ProcessingQueueUrl:
-    Value: !Ref ProcessingQueue
+    Value:!Ref ProcessingQueue
   DeadLetterQueueUrl:
-    Value: !Ref DeadLetterQueue
+    Value:!Ref DeadLetterQueue
   NotificationTopicArn:
-    Value: !Ref NotificationTopic
+    Value:!Ref NotificationTopic
   ProcessorFunctionArn:
-    Value: !GetAtt ProcessorFunction.Arn
+    Value:!GetAtt ProcessorFunction.Arn
