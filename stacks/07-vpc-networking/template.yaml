@@ -15,58 +15,78 @@ Resources:
           Value: test
         - Key: DriftTest
           Value: '07'
+        - Key: DriftInduced
+          Value: 'true'
+        - Key: Round
+          Value: '1'
 
   PublicSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       CidrBlock: 10.0.1.0/24
-      AvailabilityZone: !Select [0, !GetAZs '']
+      AvailabilityZone: !Select [0,!GetAZs '']
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
           Value: drift-test-07-public-a
         - Key: Environment
           Value: test
+        - Key: DriftInduced
+          Value: 'true'
+        - Key: Round
+          Value: '1'
 
   PublicSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       CidrBlock: 10.0.2.0/24
-      AvailabilityZone: !Select [1, !GetAZs '']
+      AvailabilityZone: !Select [1,!GetAZs '']
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
           Value: drift-test-07-public-b
         - Key: Environment
           Value: test
+        - Key: DriftInduced
+          Value: 'true'
+        - Key: Round
+          Value: '1'
 
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       CidrBlock: 10.0.11.0/24
-      AvailabilityZone: !Select [0, !GetAZs '']
+      AvailabilityZone:!Select [0,!GetAZs '']
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
           Value: drift-test-07-private-a
         - Key: Environment
           Value: test
+        - Key: DriftInduced
+          Value: 'true'
+        - Key: Round
+          Value: '1'
 
   PrivateSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       CidrBlock: 10.0.12.0/24
-      AvailabilityZone: !Select [1, !GetAZs '']
+      AvailabilityZone: !Select [1,!GetAZs '']
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
           Value: drift-test-07-private-b
         - Key: Environment
           Value: test
+        - Key: DriftInduced
+          Value: 'true'
+        - Key: Round
+          Value: '1'
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -80,24 +100,28 @@ Resources:
   IGWAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref DriftTestVPC
-      InternetGatewayId: !Ref InternetGateway
+      VpcId:!Ref DriftTestVPC
+      InternetGatewayId:!Ref InternetGateway
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       Tags:
         - Key: Name
           Value: drift-test-07-public-rt
         - Key: Environment
           Value: test
+        - Key: DriftInduced
+          Value: 'true'
+        - Key: Round
+          Value: '1'
 
   PublicDefaultRoute:
     Type: AWS::EC2::Route
     DependsOn: IGWAttachment
     Properties:
-      RouteTableId: !Ref PublicRouteTable
+      RouteTableId:!Ref PublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
@@ -105,35 +129,39 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnetA
-      RouteTableId: !Ref PublicRouteTable
+      RouteTableId:!Ref PublicRouteTable
 
   PublicSubnetBAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnetB
-      RouteTableId: !Ref PublicRouteTable
+      SubnetId:!Ref PublicSubnetB
+      RouteTableId:!Ref PublicRouteTable
 
   PrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref DriftTestVPC
+      VpcId:!Ref DriftTestVPC
       Tags:
         - Key: Name
           Value: drift-test-07-private-rt
         - Key: Environment
           Value: test
+        - Key: DriftInduced
+          Value: 'true'
+        - Key: Round
+          Value: '1'
 
   PrivateSubnetAAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PrivateSubnetA
-      RouteTableId: !Ref PrivateRouteTable
+      SubnetId:!Ref PrivateSubnetA
+      RouteTableId:!Ref PrivateRouteTable
 
   PrivateSubnetBAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PrivateSubnetB
-      RouteTableId: !Ref PrivateRouteTable
+      SubnetId:!Ref PrivateSubnetB
+      RouteTableId:!Ref PrivateRouteTable
 
 Outputs:
   VpcId:
