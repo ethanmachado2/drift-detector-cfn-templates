@@ -39,6 +39,6 @@ Resources:
 
 Outputs:
   RoleArn:
-    Value: !GetAtt DriftTestRole.Arn
+    Value:!GetAtt DriftTestRole.Arn
   RoleName:
-    Value: !Ref DriftTestRole
+    Value:!Ref DriftTestRole
