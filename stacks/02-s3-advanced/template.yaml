@@ -68,20 +68,5 @@
         }
       }
     }
- },
-  "Outputs": {
-    "BucketName": {
-      "Value": {
-        "Ref": "DriftTestBucket"
-      }
-    },
-    "BucketArn": {
-      "Value": {
-        "Fn::GetAtt": [
-          "DriftTestBucket",
-          "Arn"
-        ]
-      }
-    }
   }
 }
