@@ -28,7 +28,7 @@ Resources:
       Description: Drift detection test Lambda function
       Runtime: python3.12
       Handler: index.handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: arn:aws:iam::554598304668:role/drift-test-05-lambda-role
       Timeout: 60
       MemorySize: 256
       Environment:
@@ -53,11 +53,11 @@ Resources:
   FunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${DriftTestFunction}'
+      LogGroupName: '/aws/lambda/drift-test-05-function'
       RetentionInDays: 7
 
 Outputs:
   FunctionArn:
-    Value: !GetAtt DriftTestFunction.Arn
+    Value: arn:aws:lambda:us-east-1:554598304668:function:drift-test-05-function
   FunctionName:
-    Value: !Ref DriftTestFunction
+    Value: drift-test-05-function
